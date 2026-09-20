@@ -1,0 +1,14 @@
+; STM32F407ZG bootloader: sectors 0..4 (128 KiB)
+LR_BOOT 0x08000000 0x00020000  {
+  ER_BOOT 0x08000000 0x00020000  {
+    *.o (RESET, +First)
+    *(InRoot$$Sections)
+    .ANY (+RO)
+  }
+  RW_IRAM1 0x20000000 0x0001C000  {
+    .ANY (+RW +ZI)
+  }
+  RW_IRAM2 0x2001C000 0x00004000  {
+    .ANY (+RW +ZI)
+  }
+}

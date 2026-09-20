@@ -1,0 +1,205 @@
+        -:    0:Source:vehicle_state.c
+        -:    0:Graph:vehicle_state.gcno
+        -:    0:Data:vehicle_state.gcda
+        -:    0:Runs:1
+        -:    0:Programs:1
+        -:    1:#include "vehicle_state.h"
+        -:    2:
+        -:    3:#include "FreeRTOS.h"
+        -:    4:#include "task.h"
+        -:    5:
+        -:    6:static VehicleStateSnapshot_t s_vehicle_state;
+        -:    7:
+function transition_to called 33 returned 100% blocks executed 100%
+       33:    8:static void transition_to(VehicleStateId_t next, uint32_t now_ms)
+        -:    9:{
+       33:   10:    if (s_vehicle_state.state != next)
+branch  0 taken 25 (fallthrough)
+branch  1 taken 8
+        -:   11:    {
+       25:   12:        s_vehicle_state.state = next;
+       25:   13:        s_vehicle_state.transition_count++;
+       25:   14:        s_vehicle_state.last_transition_ms = now_ms;
+        -:   15:    }
+       33:   16:}
+        -:   17:
+function VehicleState_Init called 7 returned 100% blocks executed 100%
+        7:   18:void VehicleState_Init(uint32_t now_ms)
+        -:   19:{
+        7:   20:    taskENTER_CRITICAL();
+call    0 returned 7
+        7:   21:    s_vehicle_state.state = VCU_STATE_INIT;
+        7:   22:    s_vehicle_state.fault_flags = 0u;
+        7:   23:    s_vehicle_state.transition_count = 0u;
+        7:   24:    s_vehicle_state.last_transition_ms = now_ms;
+        7:   25:    transition_to(VCU_STATE_STANDBY, now_ms);
+call    0 returned 7
+        7:   26:    taskEXIT_CRITICAL();
+call    0 returned 7
+        7:   27:}
+        -:   28:
+function VehicleState_OnValidCommand called 10 returned 100% blocks executed 100%
+       10:   29:void VehicleState_OnValidCommand(bool drive_requested, uint32_t now_ms)
+        -:   30:{
+       10:   31:    taskENTER_CRITICAL();
+call    0 returned 10
+       10:   32:    s_vehicle_state.fault_flags &= (uint8_t)~VCU_FAULT_COMMAND_TIMEOUT;
+       10:   33:    if ((s_vehicle_state.fault_flags & VCU_FAULT_FATAL) != 0u)
+branch  0 taken 1 (fallthrough)
+branch  1 taken 9
+        -:   34:    {
+        1:   35:        transition_to(VCU_STATE_FAULT, now_ms);
+call    0 returned 1
+        -:   36:    }
+        9:   37:    else if ((s_vehicle_state.fault_flags & VCU_FAULT_SAFETY_ACTIVE) != 0u)
+branch  0 taken 1 (fallthrough)
+branch  1 taken 8
+        -:   38:    {
+        1:   39:        transition_to(VCU_STATE_SAFE_STOP, now_ms);
+call    0 returned 1
+        -:   40:    }
+        -:   41:    else
+        -:   42:    {
+        8:   43:        transition_to(drive_requested ? VCU_STATE_DRIVE : VCU_STATE_STANDBY, now_ms);
+branch  0 taken 4 (fallthrough)
+branch  1 taken 4
+call    2 returned 8
+        -:   44:    }
+       10:   45:    taskEXIT_CRITICAL();
+call    0 returned 10
+       10:   46:}
+        -:   47:
+function VehicleState_OnCommandTimeout called 2 returned 100% blocks executed 100%
+        2:   48:void VehicleState_OnCommandTimeout(uint32_t now_ms)
+        -:   49:{
+        2:   50:    taskENTER_CRITICAL();
+call    0 returned 2
+        2:   51:    s_vehicle_state.fault_flags |= VCU_FAULT_COMMAND_TIMEOUT;
+        2:   52:    if ((s_vehicle_state.fault_flags & VCU_FAULT_FATAL) != 0u)
+branch  0 taken 1 (fallthrough)
+branch  1 taken 1
+        -:   53:    {
+        1:   54:        transition_to(VCU_STATE_FAULT, now_ms);
+call    0 returned 1
+        -:   55:    }
+        -:   56:    else
+        -:   57:    {
+        1:   58:        transition_to(VCU_STATE_SAFE_STOP, now_ms);
+call    0 returned 1
+        -:   59:    }
+        2:   60:    taskEXIT_CRITICAL();
+call    0 returned 2
+        2:   61:}
+        -:   62:
+function VehicleState_SetFatalFault called 7 returned 100% blocks executed 100%
+        7:   63:void VehicleState_SetFatalFault(bool active, uint32_t now_ms)
+        -:   64:{
+        7:   65:    taskENTER_CRITICAL();
+call    0 returned 7
+        7:   66:    if (active)
+branch  0 taken 3 (fallthrough)
+branch  1 taken 4
+        -:   67:    {
+        3:   68:        s_vehicle_state.fault_flags |= VCU_FAULT_FATAL;
+        3:   69:        transition_to(VCU_STATE_FAULT, now_ms);
+call    0 returned 3
+        -:   70:    }
+        -:   71:    else
+        -:   72:    {
+        4:   73:        if ((s_vehicle_state.fault_flags & VCU_FAULT_FATAL) != 0u)
+branch  0 taken 3 (fallthrough)
+branch  1 taken 1
+        -:   74:        {
+        3:   75:            s_vehicle_state.fault_flags &= (uint8_t)~VCU_FAULT_FATAL;
+        3:   76:            transition_to((s_vehicle_state.fault_flags &
+branch  0 taken 2 (fallthrough)
+branch  1 taken 1
+call    2 returned 3
+        -:   77:                           (VCU_FAULT_COMMAND_TIMEOUT | VCU_FAULT_SAFETY_ACTIVE)) != 0u
+        -:   78:                              ? VCU_STATE_SAFE_STOP
+        -:   79:                              : VCU_STATE_STANDBY,
+        -:   80:                          now_ms);
+        -:   81:        }
+        -:   82:    }
+        7:   83:    taskEXIT_CRITICAL();
+call    0 returned 7
+        7:   84:}
+        -:   85:
+function VehicleState_SetSafetyFault called 9 returned 100% blocks executed 100%
+        9:   86:void VehicleState_SetSafetyFault(bool active, uint32_t now_ms)
+        -:   87:{
+        9:   88:    taskENTER_CRITICAL();
+call    0 returned 9
+        9:   89:    if (active)
+branch  0 taken 5 (fallthrough)
+branch  1 taken 4
+        -:   90:    {
+        5:   91:        s_vehicle_state.fault_flags |= VCU_FAULT_SAFETY_ACTIVE;
+        5:   92:        transition_to((s_vehicle_state.fault_flags & VCU_FAULT_FATAL) != 0u
+branch  0 taken 1 (fallthrough)
+branch  1 taken 4
+call    2 returned 5
+        -:   93:                          ? VCU_STATE_FAULT
+        -:   94:                          : VCU_STATE_SAFE_STOP,
+        -:   95:                      now_ms);
+        -:   96:    }
+        -:   97:    else
+        -:   98:    {
+        4:   99:        if ((s_vehicle_state.fault_flags & VCU_FAULT_SAFETY_ACTIVE) != 0u)
+branch  0 taken 3 (fallthrough)
+branch  1 taken 1
+        -:  100:        {
+        3:  101:            s_vehicle_state.fault_flags &= (uint8_t)~VCU_FAULT_SAFETY_ACTIVE;
+        3:  102:            if ((s_vehicle_state.fault_flags & VCU_FAULT_FATAL) != 0u)
+branch  0 taken 1 (fallthrough)
+branch  1 taken 2
+        -:  103:            {
+        1:  104:                transition_to(VCU_STATE_FAULT, now_ms);
+call    0 returned 1
+        -:  105:            }
+        -:  106:            else
+        -:  107:            {
+        2:  108:                transition_to((s_vehicle_state.fault_flags & VCU_FAULT_COMMAND_TIMEOUT) != 0u
+branch  0 taken 1 (fallthrough)
+branch  1 taken 1
+call    2 returned 2
+        -:  109:                                  ? VCU_STATE_SAFE_STOP
+        -:  110:                                  : VCU_STATE_STANDBY,
+        -:  111:                              now_ms);
+        -:  112:            }
+        -:  113:        }
+        -:  114:    }
+        9:  115:    taskEXIT_CRITICAL();
+call    0 returned 9
+        9:  116:}
+        -:  117:
+function VehicleState_GetSnapshot called 37 returned 100% blocks executed 100%
+       37:  118:VehicleStateSnapshot_t VehicleState_GetSnapshot(void)
+        -:  119:{
+        -:  120:    VehicleStateSnapshot_t snapshot;
+        -:  121:
+       37:  122:    taskENTER_CRITICAL();
+call    0 returned 37
+       37:  123:    snapshot = s_vehicle_state;
+       37:  124:    taskEXIT_CRITICAL();
+call    0 returned 37
+       37:  125:    return snapshot;
+        -:  126:}
+        -:  127:
+function VehicleState_DriveAllowed called 3 returned 100% blocks executed 100%
+        3:  128:bool VehicleState_DriveAllowed(void)
+        -:  129:{
+        -:  130:    bool allowed;
+        -:  131:
+        3:  132:    taskENTER_CRITICAL();
+call    0 returned 3
+        4:  133:    allowed = (s_vehicle_state.state == VCU_STATE_DRIVE) &&
+branch  0 taken 1 (fallthrough)
+branch  1 taken 2
+        1:  134:              (s_vehicle_state.fault_flags == 0u);
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        3:  135:    taskEXIT_CRITICAL();
+call    0 returned 3
+        3:  136:    return allowed;
+        -:  137:}

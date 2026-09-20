@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "statuses": ["verified", "partial", "open"],
+  "requirements": [
+    {
+      "id": "REQ-CAN-001",
+      "statement": "CAN1 以 500 kbit/s 完成基础通信并使用硬件过滤。",
+      "status": "partial",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-CAN-001]"}],
+      "design": [{"path": "docs/03-can-matrix.md", "contains": "500 kbit/s"}],
+      "implementation": [{"path": "firmware/KaoYa_Project/Bsp/Src/can_bus.c", "contains": "bool CanBus_Init"}],
+      "verification": [{"path": "docs/04-simulation-regression.md", "contains": "[CAN] loopback PASS"}],
+      "evidence": [{"path": "docs/01-roadmap.md", "contains": "精确过滤、Silent/Normal 台架测试与 Bus-off 恢复"}],
+      "gap": "500 kbit/s 和内部 Loopback 已验证；当前为 accept-all 过滤，真实双节点和 Bus-off 恢复未实测。"
+    },
+    {
+      "id": "REQ-COM-001",
+      "statement": "20 ms 控制命令/状态链路在 100 ms 无有效命令时进入安全输出。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-COM-001]"}],
+      "design": [{"path": "docs/03-can-matrix.md", "contains": "20 ms"}],
+      "implementation": [{"path": "firmware/KaoYa_Project/App/Src/control_task.c", "contains": "CTRL_CFG_CMD_TIMEOUT_MS"}],
+      "verification": [{"path": "tools/virtual_vcu.py", "contains": "expecting safe-stop within 100 ms"}],
+      "evidence": [{"path": "docs/06-software-vcu-regression.md", "contains": "0x100` 停发后 100 ms 内"}],
+      "gap": ""
+    },
+    {
+      "id": "REQ-STATE-001",
+      "statement": "VCU 实现可解释的运行、降级与故障状态转移。",
+      "status": "partial",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-STATE-001]"}],
+      "design": [{"path": "docs/03-can-matrix.md", "contains": "SAFE_STOP"}],
+      "implementation": [{"path": "firmware/KaoYa_Project/App/Inc/vehicle_state.h", "contains": "VCU_STATE_SAFE_STOP"}],
+      "verification": [{"path": "tools/fault_injection_tester.py", "contains": "INJECT ALL -> FAULT: PASS"}],
+      "evidence": [{"path": "docs/09-phase5-test-report.md", "contains": "INJECT ALL -> FAULT: PASS"}],
+      "gap": "实现为 INIT/STANDBY/DRIVE/SAFE_STOP/FAULT；章程原定义的 READY 和 DERATE 尚未独立建模。"
+    },
+    {
+      "id": "REQ-CTRL-001",
+      "statement": "双轮 PID 闭环支持正反转速度反馈。",
+      "status": "partial",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-CTRL-001]"}],
+      "design": [{"path": "docs/04-simulation-regression.md", "contains": "电机/编码器模拟判据"}],
+      "implementation": [
+        {"path": "firmware/KaoYa_Project/Bsp/Src/pid.c", "contains": "int16_t PID_Update"},
+        {"path": "firmware/KaoYa_Project/Bsp/Src/capture.c", "contains": "EncoderCap_SetDirectionHint"}
+      ],
+      "verification": [{"path": "docs/04-simulation-regression.md", "contains": "软件一阶电机模型"}],
+      "evidence": [{"path": "docs/06-software-vcu-regression.md", "contains": "统一安全出口立即强制 PWM 为 0"}],
+      "gap": "软件电机模型和定时器跳线方案已验证；实体电机+增量编码器闭环未上板。"
+    },
+    {
+      "id": "REQ-COM-002",
+      "statement": "CRC8、Alive Counter 和报文新鲜度错误不得更新控制目标。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-COM-002]"}],
+      "design": [{"path": "docs/03-can-matrix.md", "contains": "CRC8 参数"}],
+      "implementation": [{"path": "firmware/KaoYa_Project/Bsp/Src/vehicle_can.c", "contains": "VehicleCan_DecodeCommand"}],
+      "verification": [
+        {"path": "tests/test_phase3_protocol.py", "contains": "test_command_frame_matches_dbc"},
+        {"path": "tests/test_phase3_protocol.py", "contains": "test_motion_status_crc_rejection"}
+      ],
+      "evidence": [{"path": "docs/06-software-vcu-regression.md", "contains": "连续 100 ms 都无有效报文"}],
+      "gap": ""
+    },
+    {
+      "id": "REQ-DTC-001",
+      "statement": "DTC 支持去抖、Freeze Frame、条件清除和 Sector 11 掉电保存。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-DTC-001]"}],
+      "design": [{"path": "docs/07-dtc-management.md", "contains": "NvM 存储策略"}],
+      "implementation": [
+        {"path": "firmware/KaoYa_Project/App/Src/dtc_manager.c", "contains": "void DtcManager_Report"},
+        {"path": "firmware/KaoYa_Project/App/Src/nvm_dtc.c", "contains": "NVM_DTC_SAVE_INTERVAL_MS"}
+      ],
+      "verification": [{"path": "tools/fault_injection_tester.py", "contains": "FAULT INJECTION REGRESSION PASS"}],
+      "evidence": [{"path": "docs/09-phase5-test-report.md", "contains": "CLEAR in STANDBY/NVM settle: PASS"}],
+      "gap": ""
+    },
+    {
+      "id": "REQ-UDS-001",
+      "statement": "ISO-TP 和 UDS 子集覆盖会话、DTC、DID、例程、TesterPresent 和 ECU Reset。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-UDS-001]"}],
+      "design": [{"path": "docs/08-uds-diagnostics.md", "contains": "## 已实现"}],
+      "implementation": [{"path": "firmware/KaoYa_Project/App/Src/uds_server.c", "contains": "void UdsServer_ProcessCanFrame"}],
+      "verification": [{"path": "tools/uds_phase5_tester.py", "contains": "UDS PHASE5 REGRESSION PASS"}],
+      "evidence": [{"path": "docs/09-phase5-test-report.md", "contains": "UDS PHASE5 REGRESSION PASS"}],
+      "gap": ""
+    },
+    {
+      "id": "REQ-TEST-001",
+      "statement": "Python 自动化测试可重复生成 PASS/FAIL，并支持故障注入。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[REQ-TEST-001]"}],
+      "design": [{"path": "tools/README.md", "contains": "## 已有工具"}],
+      "implementation": [{"path": "tools/fault_injection_tester.py", "contains": "def run"}],
+      "verification": [{"path": "tests/test_phase3_protocol.py", "contains": "class Phase3ProtocolTests"}],
+      "evidence": [{"path": "docs/09-phase5-test-report.md", "contains": "主机协议单元测试"}],
+      "gap": ""
+    },
+    {
+      "id": "ADV-BOOT-001",
+      "statement": "Bootloader 与 Application 独立分区和构建，且不覆盖 DTC NvM。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[ADV-BOOT-001]"}],
+      "design": [{"path": "docs/10-bootloader-design.md", "contains": "## Flash 分区"}],
+      "implementation": [
+        {"path": "firmware/Shared/boot_layout.h", "contains": "BOOT_NVM_BASE_ADDRESS"},
+        {"path": "tools/build_bootloader.ps1", "contains": "Bootloader build passed"}
+      ],
+      "verification": [{"path": "tests/test_boot_image.py", "contains": "test_factory_hex_round_trip_and_preserves_nvm"}],
+      "evidence": [{"path": "docs/11-phase6-boot-jump-test-report.md", "contains": "Verify OK"}],
+      "gap": ""
+    },
+    {
+      "id": "ADV-BOOT-002",
+      "statement": "Bootloader 通过 UDS 0x27/0x31/0x34/0x36/0x37 完成受控下载。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[ADV-BOOT-002]"}],
+      "design": [{"path": "docs/10-bootloader-design.md", "contains": "已实现的诊断刷写顺序"}],
+      "implementation": [{"path": "firmware/Bootloader/Src/boot_diag.c", "contains": "else if (sid == 0x37u)"}],
+      "verification": [{"path": "tools/bootloader_tester.py", "contains": "PROGRAMMING PASS"}],
+      "evidence": [{"path": "docs/12-phase6-diagnostic-flash-test-report.md", "contains": "PROGRAMMING PASS: 75284 bytes in 24.8s"}],
+      "gap": ""
+    },
+    {
+      "id": "ADV-BOOT-003",
+      "statement": "Bootloader 校验镜像/Manifest CRC32 和向量表，仅跳转有效应用。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[ADV-BOOT-003]"}],
+      "design": [{"path": "docs/10-bootloader-design.md", "contains": "## 启动校验顺序"}],
+      "implementation": [{"path": "firmware/Bootloader/Src/boot_image.c", "contains": "BootImage_Validate"}],
+      "verification": [{"path": "tests/test_boot_image.py", "contains": "test_corrupted_image_is_rejected"}],
+      "evidence": [{"path": "docs/11-phase6-boot-jump-test-report.md", "contains": "F102"}],
+      "gap": ""
+    },
+    {
+      "id": "ADV-QA-001",
+      "statement": "Application 和 Bootloader 构建可重复，Application 达到 0 Error/0 Warning。",
+      "status": "verified",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[ADV-QA-001]"}],
+      "design": [{"path": "tools/README.md", "contains": "build_firmware.ps1"}],
+      "implementation": [{"path": "tools/build_firmware.ps1", "contains": "Firmware rebuild passed."}],
+      "verification": [{"path": "tools/build_bootloader.ps1", "contains": "Bootloader build passed"}],
+      "evidence": [{"path": "docs/11-phase6-boot-jump-test-report.md", "contains": "0 Error、0 Warning"}],
+      "gap": ""
+    },
+    {
+      "id": "ADV-QA-002",
+      "statement": "建立静态分析和测试覆盖率报告。",
+      "status": "partial",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[ADV-QA-002]"}],
+      "design": [{"path": "docs/01-roadmap.md", "contains": "MISRA 风格检查和静态分析"}],
+      "implementation": [
+        {"path": "tools/run_static_analysis.ps1", "contains": "-fanalyzer"},
+        {"path": "tools/run_host_coverage.py", "contains": "--coverage"}
+      ],
+      "verification": [
+        {"path": "tests/host/test_core.c", "contains": "HOST CORE REGRESSION PASS"},
+        {"path": "tests/test_coverage_parser.py", "contains": "test_unexecuted_lines_and_branch_outcomes"}
+      ],
+      "evidence": [
+        {"path": "docs/14-static-analysis-report.md", "contains": "warnings=0 errors=0 policy=0"},
+        {"path": "docs/15-host-coverage-report.md", "contains": "287/298"}
+      ],
+      "gap": "已建立 5 个固件 C 模块的主机行/分支覆盖率；Bootloader、Flash/NvM、驱动和其他目标代码覆盖率尚未生成，主机替身不验证硬件/并发。"
+    },
+    {
+      "id": "ACC-TIMING-001",
+      "statement": "10 ms 控制周期的实际抖动必须被测量并记录。",
+      "status": "open",
+      "source": [{"path": "docs/00-project-charter.md", "contains": "[ACC-TIMING-001]"}],
+      "design": [{"path": "docs/02-architecture.md", "contains": "ControlTask"}],
+      "implementation": [{"path": "firmware/KaoYa_Project/App/Src/control_task.c", "contains": "CTRL_CFG_PERIOD_MS"}],
+      "verification": [],
+      "evidence": [],
+      "gap": "任务周期已配置为 10 ms，但尚无 GPIO/时钟捕获或运行时统计的抖动数据。"
+    }
+  ]
+}

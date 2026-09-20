@@ -1,0 +1,29 @@
+; Absolute provisioning image. No section targets Sector 11 NvM.
+LR_BOOTLOADER 0x08000000 0x00020000  {
+  ER_BOOTLOADER 0x08000000 0x00020000  {
+    startup_stm32f407xx.o (RESET, +First)
+    *(InRoot$$Sections)
+    main.o (+RO)
+    boot_image.o (+RO)
+    system_stm32f4xx.o (+RO)
+    .ANY (+RO)
+  }
+  RW_IRAM1 0x20000000 0x0001C000  {
+    .ANY (+RW +ZI)
+  }
+  RW_IRAM2 0x2001C000 0x00004000  {
+    .ANY (+RW +ZI)
+  }
+}
+
+LR_APPLICATION 0x08020000 0x000BFFE0  {
+  ER_APPLICATION 0x08020000 0x000BFFE0  {
+    *(.factory_application)
+  }
+}
+
+LR_MANIFEST 0x080DFFE0 0x00000020  {
+  ER_MANIFEST 0x080DFFE0 FIXED 0x00000020  {
+    *(.factory_manifest)
+  }
+}

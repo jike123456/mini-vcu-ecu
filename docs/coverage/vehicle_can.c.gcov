@@ -1,0 +1,158 @@
+        -:    0:Source:vehicle_can.c
+        -:    0:Graph:vehicle_can.gcno
+        -:    0:Data:vehicle_can.gcda
+        -:    0:Runs:1
+        -:    0:Programs:1
+        -:    1:#include "vehicle_can.h"
+        -:    2:
+        -:    3:#include <stddef.h>
+        -:    4:
+function prvReadI16 called 6 returned 100% blocks executed 100%
+        6:    5:static int16_t prvReadI16(const uint8_t *data)
+        -:    6:{
+        6:    7:    return (int16_t)((uint16_t)data[0] | ((uint16_t)data[1] << 8U));
+        -:    8:}
+        -:    9:
+function prvWriteI16 called 2 returned 100% blocks executed 100%
+        2:   10:static void prvWriteI16(uint8_t *data, int16_t value)
+        -:   11:{
+        2:   12:    uint16_t raw = (uint16_t)value;
+        2:   13:    data[0] = (uint8_t)raw;
+        2:   14:    data[1] = (uint8_t)(raw >> 8U);
+        2:   15:}
+        -:   16:
+function VehicleCan_Crc8SaeJ1850 called 19 returned 100% blocks executed 100%
+       19:   17:uint8_t VehicleCan_Crc8SaeJ1850(const uint8_t *data, uint8_t length)
+        -:   18:{
+       19:   19:    uint8_t crc = 0xFFU;
+        -:   20:    uint8_t index;
+        -:   21:
+       19:   22:    if (data == NULL) {
+branch  0 taken 1 (fallthrough)
+branch  1 taken 18
+        1:   23:        return 0U;
+        -:   24:    }
+        -:   25:
+      139:   26:    for (index = 0U; index < length; index++) {
+branch  0 taken 121
+branch  1 taken 18 (fallthrough)
+        -:   27:        uint8_t bit;
+      121:   28:        crc ^= data[index];
+     1089:   29:        for (bit = 0U; bit < 8U; bit++) {
+branch  0 taken 968
+branch  1 taken 121 (fallthrough)
+     1547:   30:            crc = ((crc & 0x80U) != 0U)
+branch  0 taken 579 (fallthrough)
+branch  1 taken 389
+      579:   31:                      ? (uint8_t)((uint8_t)(crc << 1U) ^ 0x1DU)
+        -:   32:                      : (uint8_t)(crc << 1U);
+        -:   33:        }
+        -:   34:    }
+        -:   35:
+       18:   36:    return (uint8_t)(crc ^ 0xFFU);
+        -:   37:}
+        -:   38:
+function VehicleCan_DecodeCommand called 12 returned 100% blocks executed 100%
+       12:   39:VehicleCanDecodeStatus_t VehicleCan_DecodeCommand(
+        -:   40:    VehicleCanRxContext_t *context,
+        -:   41:    const uint8_t *data,
+        -:   42:    uint8_t dlc,
+        -:   43:    VehicleCanCommand_t *command)
+        -:   44:{
+        -:   45:    uint8_t alive;
+        -:   46:
+       12:   47:    if ((context == NULL) || (data == NULL) || (command == NULL) ||
+branch  0 taken 11 (fallthrough)
+branch  1 taken 1
+branch  2 taken 10 (fallthrough)
+branch  3 taken 1
+branch  4 taken 9 (fallthrough)
+branch  5 taken 1
+branch  6 taken 1 (fallthrough)
+branch  7 taken 8
+        -:   48:        (dlc != VEHICLE_CAN_DLC)) {
+        4:   49:        if (context != NULL) {
+branch  0 taken 3 (fallthrough)
+branch  1 taken 1
+        3:   50:            context->length_errors++;
+        -:   51:        }
+        4:   52:        return VEHICLE_CAN_DECODE_LENGTH;
+        -:   53:    }
+        -:   54:
+        8:   55:    if (VehicleCan_Crc8SaeJ1850(data, 7U) != data[7]) {
+call    0 returned 8
+branch  1 taken 1 (fallthrough)
+branch  2 taken 7
+        1:   56:        context->crc_errors++;
+        1:   57:        return VEHICLE_CAN_DECODE_CRC;
+        -:   58:    }
+        -:   59:
+        7:   60:    alive = (uint8_t)(data[6] & 0x0FU);
+        7:   61:    if ((data[6] & 0xF0U) != 0U) {
+branch  0 taken 1 (fallthrough)
+branch  1 taken 6
+        1:   62:        context->value_errors++;
+        1:   63:        return VEHICLE_CAN_DECODE_VALUE;
+        -:   64:    }
+        -:   65:
+        6:   66:    if (context->counter_valid) {
+branch  0 taken 5 (fallthrough)
+branch  1 taken 1
+        5:   67:        uint8_t expected = (uint8_t)((context->last_counter + 1U) & 0x0FU);
+        5:   68:        if (alive != expected) {
+branch  0 taken 1 (fallthrough)
+branch  1 taken 4
+        -:   69:            /* Resynchronize after reporting one discontinuity. */
+        1:   70:            context->last_counter = alive;
+        1:   71:            context->counter_errors++;
+        1:   72:            return VEHICLE_CAN_DECODE_COUNTER;
+        -:   73:        }
+        -:   74:    }
+        5:   75:    context->counter_valid = true;
+        5:   76:    context->last_counter = alive;
+        -:   77:
+        5:   78:    if ((data[4] > 1U) || (data[5] > 2U)) {
+branch  0 taken 4 (fallthrough)
+branch  1 taken 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 3
+        2:   79:        context->value_errors++;
+        2:   80:        return VEHICLE_CAN_DECODE_VALUE;
+        -:   81:    }
+        -:   82:
+        3:   83:    command->target_vx_mmps = prvReadI16(&data[0]);
+call    0 returned 3
+        3:   84:    command->target_wz_mradps = prvReadI16(&data[2]);
+call    0 returned 3
+        3:   85:    command->ignition = data[4];
+        3:   86:    command->gear = data[5];
+        3:   87:    command->alive_counter = alive;
+        3:   88:    context->accepted++;
+        3:   89:    return VEHICLE_CAN_DECODE_OK;
+        -:   90:}
+        -:   91:
+function VehicleCan_EncodeMotionStatus called 2 returned 100% blocks executed 100%
+        2:   92:void VehicleCan_EncodeMotionStatus(
+        -:   93:    int16_t left_wheel_mmps,
+        -:   94:    int16_t right_wheel_mmps,
+        -:   95:    uint8_t vehicle_state,
+        -:   96:    uint8_t fault_flags,
+        -:   97:    uint8_t alive_counter,
+        -:   98:    uint8_t data[VEHICLE_CAN_DLC])
+        -:   99:{
+        2:  100:    if (data == NULL) {
+branch  0 taken 1 (fallthrough)
+branch  1 taken 1
+        1:  101:        return;
+        -:  102:    }
+        -:  103:
+        1:  104:    prvWriteI16(&data[0], left_wheel_mmps);
+call    0 returned 1
+        1:  105:    prvWriteI16(&data[2], right_wheel_mmps);
+call    0 returned 1
+        1:  106:    data[4] = vehicle_state;
+        1:  107:    data[5] = fault_flags;
+        1:  108:    data[6] = (uint8_t)(alive_counter & 0x0FU);
+        1:  109:    data[7] = VehicleCan_Crc8SaeJ1850(data, 7U);
+call    0 returned 1
+        -:  110:}

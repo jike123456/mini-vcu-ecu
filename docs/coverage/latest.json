@@ -1,0 +1,130 @@
+{
+  "generated_utc": "2026-09-11T16:29:38.439506+00:00",
+  "scope": "Five production C modules on host; hardware and RTOS dependencies stubbed",
+  "compiler": "gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 8.1.0",
+  "gcov": "gcov (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 8.1.0",
+  "flags": [
+    "-std=c11",
+    "-O0",
+    "-g",
+    "--coverage",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Istubs",
+    "-Iapp",
+    "-Ibsp"
+  ],
+  "test_output": "CAN CRC / counter / malformed frames: PASS\nState transitions / fatal priority / recovery: PASS\nDTC 3-fail / 10-pass thresholds / freeze / restore / clear: PASS\nPID limits / anti-windup / derivative / rounding: PASS\nUDS NRC / ISO-TP / sessions / routine / reset ordering: PASS\nHOST CORE REGRESSION PASS: 857 checks (including critical-section balance)\n",
+  "modules": [
+    {
+      "lines": 56,
+      "lines_hit": 56,
+      "branches": 32,
+      "branches_hit": 32,
+      "uncovered_lines": [],
+      "uncovered_branches": [],
+      "path": "firmware/KaoYa_Project/Bsp/Src/vehicle_can.c",
+      "sha256": "9730c9ef1dcb2acb05ec9a267a29c8ba7cce939cd4d9501d92d72b310d85ee7a"
+    },
+    {
+      "lines": 66,
+      "lines_hit": 66,
+      "branches": 30,
+      "branches_hit": 29,
+      "uncovered_lines": [],
+      "uncovered_branches": [
+        {
+          "line": 134,
+          "branch": 1
+        }
+      ],
+      "path": "firmware/KaoYa_Project/App/Src/vehicle_state.c",
+      "sha256": "78636689d43b8e23b8310f17c130c7c34fed345df6f755ea5c8c5c7998287d52"
+    },
+    {
+      "lines": 116,
+      "lines_hit": 116,
+      "branches": 56,
+      "branches_hit": 52,
+      "uncovered_lines": [],
+      "uncovered_branches": [
+        {
+          "line": 29,
+          "branch": 1
+        },
+        {
+          "line": 113,
+          "branch": 1
+        },
+        {
+          "line": 129,
+          "branch": 1
+        },
+        {
+          "line": 130,
+          "branch": 0
+        }
+      ],
+      "path": "firmware/KaoYa_Project/App/Src/dtc_manager.c",
+      "sha256": "9d6c15d65a4533143be5d7e49e7722e2d2d51e79c76abd05d58bff1acac59203"
+    },
+    {
+      "lines": 311,
+      "lines_hit": 311,
+      "branches": 162,
+      "branches_hit": 156,
+      "uncovered_lines": [],
+      "uncovered_branches": [
+        {
+          "line": 112,
+          "branch": 1
+        },
+        {
+          "line": 112,
+          "branch": 2
+        },
+        {
+          "line": 134,
+          "branch": 1
+        },
+        {
+          "line": 134,
+          "branch": 3
+        },
+        {
+          "line": 134,
+          "branch": 4
+        },
+        {
+          "line": 203,
+          "branch": 2
+        }
+      ],
+      "path": "firmware/KaoYa_Project/App/Src/uds_server.c",
+      "sha256": "d2f10c74fdf0e5875ccb8612b35791afdf7f6821c02b169891bcafe66d1045cb"
+    },
+    {
+      "lines": 30,
+      "lines_hit": 30,
+      "branches": 18,
+      "branches_hit": 18,
+      "uncovered_lines": [],
+      "uncovered_branches": [],
+      "path": "firmware/KaoYa_Project/Bsp/Src/pid.c",
+      "sha256": "ed19fb6c7988aa328ed0e5384fd0a4bb5ce6ab83af7f2b34dee828396246922d"
+    }
+  ],
+  "test_sha256": "f7af779b5b4a6fc8df21418e4c28a91ab400460b70a5a583c1e087d4dcf74725",
+  "totals": {
+    "lines": 579,
+    "lines_hit": 579,
+    "branches": 298,
+    "branches_hit": 287
+  },
+  "thresholds": {
+    "lines": 90.0,
+    "branches": 80.0
+  },
+  "status": "pass"
+}

@@ -1,0 +1,43 @@
+VERSION "Mini VCU Phase 3 V1.0"
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+
+BS_:
+
+BU_: PC VCU
+
+BO_ 256 VCU_COMMAND: 8 PC
+ SG_ TargetVx : 0|16@1- (1,0) [-32768|32767] "mm/s" VCU
+ SG_ TargetWz : 16|16@1- (1,0) [-32768|32767] "mrad/s" VCU
+ SG_ Ignition : 32|8@1+ (1,0) [0|1] "" VCU
+ SG_ Gear : 40|8@1+ (1,0) [0|2] "" VCU
+ SG_ AliveCounter : 48|4@1+ (1,0) [0|15] "" VCU
+ SG_ CRC8 : 56|8@1+ (1,0) [0|255] "" VCU
+
+BO_ 384 VCU_MOTION_STATUS: 8 VCU
+ SG_ LeftWheelSpeed : 0|16@1- (1,0) [-32768|32767] "mm/s" PC
+ SG_ RightWheelSpeed : 16|16@1- (1,0) [-32768|32767] "mm/s" PC
+ SG_ VehicleState : 32|8@1+ (1,0) [0|4] "" PC
+ SG_ MotionFaultFlags : 40|8@1+ (1,0) [0|255] "" PC
+ SG_ AliveCounter : 48|4@1+ (1,0) [0|15] "" PC
+ SG_ CRC8 : 56|8@1+ (1,0) [0|255] "" PC
+
+BO_ 257 VCU_TEST_FAULT_INJECTION: 8 PC
+ SG_ FaultMask : 0|8@1+ (1,0) [0|31] "" VCU
+ SG_ UnlockKey : 8|8@1+ (1,0) [0|255] "" VCU
+ SG_ AliveCounter : 48|4@1+ (1,0) [0|15] "" VCU
+ SG_ CRC8 : 56|8@1+ (1,0) [0|255] "" VCU
+
+VAL_ 256 Ignition 0 "OFF" 1 "ON" ;
+VAL_ 256 Gear 0 "N" 1 "D" 2 "R" ;
+VAL_ 384 VehicleState 0 "INIT" 1 "STANDBY" 2 "DRIVE" 3 "SAFE_STOP" 4 "FAULT" ;
+
+CM_ BO_ 256 "20 ms control command; timeout is 100 ms; CRC-8/SAE-J1850 covers bytes 0..6.";
+CM_ BO_ 384 "20 ms motion status; CRC-8/SAE-J1850 covers bytes 0..6.";
+CM_ SG_ 384 MotionFaultFlags "bit0=command timeout, bit1=confirmed active DTC, bit2=confirmed stored DTC, bit3=safety-related fault active, bit7=fatal fault";
+CM_ BO_ 257 "Bench-test only; FaultMask bits: 0=undervoltage, 1=encoder, 2=IMU, 3=task, 4=CAN; UnlockKey must be 0xA5; CRC covers bytes 0..6.";

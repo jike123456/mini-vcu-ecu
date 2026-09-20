@@ -1,0 +1,340 @@
+        -:    0:Source:dtc_manager.c
+        -:    0:Graph:dtc_manager.gcno
+        -:    0:Data:dtc_manager.gcda
+        -:    0:Runs:1
+        -:    0:Programs:1
+        -:    1:#include "dtc_manager.h"
+        -:    2:
+        -:    3:#include <string.h>
+        -:    4:
+        -:    5:#include "FreeRTOS.h"
+        -:    6:#include "task.h"
+        -:    7:#include "log_task.h"
+        -:    8:
+        -:    9:#define DTC_CONFIRM_THRESHOLD  (3u)
+        -:   10:#define DTC_HEAL_THRESHOLD     (10u)
+        -:   11:
+        -:   12:static DtcRecord_t s_records[DTC_ID_COUNT];
+        -:   13:static DtcFreezeFrame_t s_latest_context;
+        -:   14:static uint32_t s_generation;
+        -:   15:
+function code_for_id called 63 returned 100% blocks executed 80%
+       63:   16:static uint32_t code_for_id(DtcId_t id)
+        -:   17:{
+        -:   18:    static const uint32_t codes[DTC_ID_COUNT] = {
+        -:   19:        DTC_CODE_COMMAND_TIMEOUT,
+        -:   20:        DTC_CODE_COMMAND_CRC,
+        -:   21:        DTC_CODE_COMMAND_COUNTER,
+        -:   22:        DTC_CODE_COMMAND_VALUE,
+        -:   23:        DTC_CODE_BATTERY_UNDERVOLTAGE,
+        -:   24:        DTC_CODE_ENCODER_PLAUSIBILITY,
+        -:   25:        DTC_CODE_IMU_COMMUNICATION,
+        -:   26:        DTC_CODE_TASK_MONITOR,
+        -:   27:        DTC_CODE_CAN_CONTROLLER
+        -:   28:    };
+      63*:   29:    return ((uint32_t)id < (uint32_t)DTC_ID_COUNT) ? codes[id] : 0u;
+branch  0 taken 63 (fallthrough)
+branch  1 taken 0
+        -:   30:}
+        -:   31:
+function DtcManager_Init called 7 returned 100% blocks executed 100%
+        7:   32:void DtcManager_Init(void)
+        -:   33:{
+        -:   34:    uint32_t index;
+        -:   35:
+        7:   36:    taskENTER_CRITICAL();
+call    0 returned 7
+        7:   37:    (void)memset(s_records, 0, sizeof(s_records));
+        7:   38:    (void)memset(&s_latest_context, 0, sizeof(s_latest_context));
+        7:   39:    s_generation = 0u;
+       70:   40:    for (index = 0u; index < (uint32_t)DTC_ID_COUNT; index++)
+branch  0 taken 63
+branch  1 taken 7 (fallthrough)
+        -:   41:    {
+       63:   42:        s_records[index].code = code_for_id((DtcId_t)index);
+call    0 returned 63
+        -:   43:    }
+        7:   44:    taskEXIT_CRITICAL();
+call    0 returned 7
+        7:   45:}
+        -:   46:
+function DtcManager_UpdateContext called 1 returned 100% blocks executed 100%
+        1:   47:void DtcManager_UpdateContext(int16_t command_vx_mmps,
+        -:   48:                              int16_t command_wz_mradps,
+        -:   49:                              int16_t left_wheel_mmps,
+        -:   50:                              int16_t right_wheel_mmps,
+        -:   51:                              uint8_t vehicle_state,
+        -:   52:                              uint32_t now_ms)
+        -:   53:{
+        1:   54:    taskENTER_CRITICAL();
+call    0 returned 1
+        1:   55:    s_latest_context.timestamp_ms = now_ms;
+        1:   56:    s_latest_context.vehicle_state = vehicle_state;
+        1:   57:    s_latest_context.command_vx_mmps = command_vx_mmps;
+        1:   58:    s_latest_context.command_wz_mradps = command_wz_mradps;
+        1:   59:    s_latest_context.left_wheel_mmps = left_wheel_mmps;
+        1:   60:    s_latest_context.right_wheel_mmps = right_wheel_mmps;
+        1:   61:    taskEXIT_CRITICAL();
+call    0 returned 1
+        1:   62:}
+        -:   63:
+function DtcManager_Report called 46 returned 100% blocks executed 100%
+       46:   64:void DtcManager_Report(DtcId_t id, bool failed, uint32_t now_ms)
+        -:   65:{
+        -:   66:    DtcRecord_t *record;
+       46:   67:    bool newly_confirmed = false;
+       46:   68:    uint32_t confirmed_code = 0u;
+        -:   69:    uint8_t old_status;
+        -:   70:    uint8_t old_occurrence;
+        -:   71:    bool old_freeze_valid;
+        -:   72:
+       46:   73:    if ((uint32_t)id >= (uint32_t)DTC_ID_COUNT) return;
+branch  0 taken 1 (fallthrough)
+branch  1 taken 45
+        -:   74:
+       45:   75:    taskENTER_CRITICAL();
+call    0 returned 45
+       45:   76:    record = &s_records[id];
+       45:   77:    old_status = record->status;
+       45:   78:    old_occurrence = record->occurrence_count;
+       45:   79:    old_freeze_valid = record->freeze_frame_valid;
+       45:   80:    if (failed)
+branch  0 taken 34 (fallthrough)
+branch  1 taken 11
+        -:   81:    {
+       34:   82:        record->pass_count = 0u;
+       34:   83:        if (record->failure_count < DTC_CONFIRM_THRESHOLD)
+branch  0 taken 33 (fallthrough)
+branch  1 taken 1
+        -:   84:        {
+       33:   85:            record->failure_count++;
+        -:   86:        }
+       34:   87:        record->status |= DTC_STATUS_TEST_FAILED |
+        -:   88:                          DTC_STATUS_TEST_FAILED_THIS_CYCLE |
+        -:   89:                          DTC_STATUS_TEST_FAILED_SINCE_CLEAR;
+        -:   90:
+       34:   91:        if (record->failure_count >= DTC_CONFIRM_THRESHOLD)
+branch  0 taken 12 (fallthrough)
+branch  1 taken 22
+        -:   92:        {
+       12:   93:            if ((record->status & DTC_STATUS_CONFIRMED) == 0u)
+branch  0 taken 11 (fallthrough)
+branch  1 taken 1
+        -:   94:            {
+       11:   95:                newly_confirmed = true;
+       11:   96:                confirmed_code = record->code;
+       11:   97:                if (record->occurrence_count < 0xFFu)
+branch  0 taken 10 (fallthrough)
+branch  1 taken 1
+        -:   98:                {
+       10:   99:                    record->occurrence_count++;
+        -:  100:                }
+       11:  101:                s_latest_context.timestamp_ms = now_ms;
+       11:  102:                record->freeze_frame = s_latest_context;
+       11:  103:                record->freeze_frame_valid = true;
+        -:  104:            }
+       12:  105:            record->status |= DTC_STATUS_PENDING | DTC_STATUS_CONFIRMED;
+        -:  106:        }
+        -:  107:    }
+        -:  108:    else
+        -:  109:    {
+       11:  110:        record->failure_count = 0u;
+       11:  111:        if ((record->status & DTC_STATUS_TEST_FAILED) != 0u)
+branch  0 taken 10 (fallthrough)
+branch  1 taken 1
+        -:  112:        {
+       10:  113:            if (record->pass_count < DTC_HEAL_THRESHOLD)
+branch  0 taken 10 (fallthrough)
+branch  1 taken 0
+        -:  114:            {
+       10:  115:                record->pass_count++;
+        -:  116:            }
+       10:  117:            if (record->pass_count >= DTC_HEAL_THRESHOLD)
+branch  0 taken 1 (fallthrough)
+branch  1 taken 9
+        -:  118:            {
+        1:  119:                record->status &= (uint8_t)~(DTC_STATUS_TEST_FAILED |
+        -:  120:                                             DTC_STATUS_PENDING);
+        -:  121:            }
+        -:  122:        }
+        -:  123:        else
+        -:  124:        {
+        1:  125:            record->pass_count = 0u;
+        -:  126:        }
+        -:  127:    }
+       45:  128:    if ((record->status != old_status) ||
+branch  0 taken 22 (fallthrough)
+branch  1 taken 23
+       22:  129:        (record->occurrence_count != old_occurrence) ||
+branch  0 taken 22 (fallthrough)
+branch  1 taken 0
+       22:  130:        (record->freeze_frame_valid != old_freeze_valid))
+branch  0 taken 0 (fallthrough)
+branch  1 taken 22
+        -:  131:    {
+       23:  132:        s_generation++;
+        -:  133:    }
+       45:  134:    taskEXIT_CRITICAL();
+call    0 returned 45
+        -:  135:
+       45:  136:    if (newly_confirmed)
+branch  0 taken 11 (fallthrough)
+branch  1 taken 34
+        -:  137:    {
+       11:  138:        LOGWARN_T("DTC", "confirmed code=0x%06lX", (unsigned long)confirmed_code);
+call    0 returned 11
+        -:  139:    }
+        -:  140:}
+        -:  141:
+function DtcManager_GetRecord called 24 returned 100% blocks executed 100%
+       24:  142:bool DtcManager_GetRecord(DtcId_t id, DtcRecord_t *record)
+        -:  143:{
+       24:  144:    if (((uint32_t)id >= (uint32_t)DTC_ID_COUNT) || (record == NULL)) return false;
+branch  0 taken 23 (fallthrough)
+branch  1 taken 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 22
+        -:  145:
+       22:  146:    taskENTER_CRITICAL();
+call    0 returned 22
+       22:  147:    *record = s_records[id];
+       22:  148:    taskEXIT_CRITICAL();
+call    0 returned 22
+       22:  149:    return true;
+        -:  150:}
+        -:  151:
+function DtcManager_GetActiveCount called 5 returned 100% blocks executed 100%
+        5:  152:uint8_t DtcManager_GetActiveCount(void)
+        -:  153:{
+        5:  154:    uint8_t count = 0u;
+        -:  155:    uint32_t index;
+        -:  156:
+        5:  157:    taskENTER_CRITICAL();
+call    0 returned 5
+       50:  158:    for (index = 0u; index < (uint32_t)DTC_ID_COUNT; index++)
+branch  0 taken 45
+branch  1 taken 5 (fallthrough)
+        -:  159:    {
+       45:  160:        uint8_t status = s_records[index].status;
+       45:  161:        if (((status & DTC_STATUS_CONFIRMED) != 0u) &&
+branch  0 taken 3 (fallthrough)
+branch  1 taken 42
+        3:  162:            ((status & DTC_STATUS_TEST_FAILED) != 0u))
+branch  0 taken 2 (fallthrough)
+branch  1 taken 1
+        -:  163:        {
+        2:  164:            count++;
+        -:  165:        }
+        -:  166:    }
+        5:  167:    taskEXIT_CRITICAL();
+call    0 returned 5
+        5:  168:    return count;
+        -:  169:}
+        -:  170:
+function DtcManager_GetConfirmedCount called 6 returned 100% blocks executed 100%
+        6:  171:uint8_t DtcManager_GetConfirmedCount(void)
+        -:  172:{
+        6:  173:    uint8_t count = 0u;
+        -:  174:    uint32_t index;
+        -:  175:
+        6:  176:    taskENTER_CRITICAL();
+call    0 returned 6
+       60:  177:    for (index = 0u; index < (uint32_t)DTC_ID_COUNT; index++)
+branch  0 taken 54
+branch  1 taken 6 (fallthrough)
+        -:  178:    {
+       54:  179:        if ((s_records[index].status & DTC_STATUS_CONFIRMED) != 0u)
+branch  0 taken 3 (fallthrough)
+branch  1 taken 51
+        -:  180:        {
+        3:  181:            count++;
+        -:  182:        }
+        -:  183:    }
+        6:  184:    taskEXIT_CRITICAL();
+call    0 returned 6
+        6:  185:    return count;
+        -:  186:}
+        -:  187:
+function DtcManager_GetGeneration called 4 returned 100% blocks executed 100%
+        4:  188:uint32_t DtcManager_GetGeneration(void)
+        -:  189:{
+        -:  190:    uint32_t generation;
+        -:  191:
+        4:  192:    taskENTER_CRITICAL();
+call    0 returned 4
+        4:  193:    generation = s_generation;
+        4:  194:    taskEXIT_CRITICAL();
+call    0 returned 4
+        4:  195:    return generation;
+        -:  196:}
+        -:  197:
+function DtcManager_RestoreRecord called 4 returned 100% blocks executed 100%
+        4:  198:bool DtcManager_RestoreRecord(DtcId_t id, uint8_t status,
+        -:  199:                              uint8_t occurrence_count,
+        -:  200:                              bool freeze_frame_valid,
+        -:  201:                              const DtcFreezeFrame_t *freeze_frame)
+        -:  202:{
+        -:  203:    DtcRecord_t *record;
+        -:  204:
+        4:  205:    if (((uint32_t)id >= (uint32_t)DTC_ID_COUNT) ||
+branch  0 taken 3 (fallthrough)
+branch  1 taken 1
+branch  2 taken 2 (fallthrough)
+branch  3 taken 1
+        2:  206:        (freeze_frame_valid && (freeze_frame == NULL)))
+branch  0 taken 1 (fallthrough)
+branch  1 taken 1
+        -:  207:    {
+        2:  208:        return false;
+        -:  209:    }
+        -:  210:
+        2:  211:    taskENTER_CRITICAL();
+call    0 returned 2
+        2:  212:    record = &s_records[id];
+        2:  213:    record->status = status;
+        2:  214:    record->occurrence_count = occurrence_count;
+        2:  215:    record->failure_count = 0u;
+        2:  216:    record->pass_count = 0u;
+        2:  217:    record->freeze_frame_valid = freeze_frame_valid;
+        2:  218:    if (freeze_frame_valid)
+branch  0 taken 1 (fallthrough)
+branch  1 taken 1
+        -:  219:    {
+        1:  220:        record->freeze_frame = *freeze_frame;
+        -:  221:    }
+        -:  222:    else
+        -:  223:    {
+        1:  224:        (void)memset(&record->freeze_frame, 0, sizeof(record->freeze_frame));
+        -:  225:    }
+        2:  226:    s_generation++;
+        2:  227:    taskEXIT_CRITICAL();
+call    0 returned 2
+        2:  228:    return true;
+        -:  229:}
+        -:  230:
+function DtcManager_ClearAll called 4 returned 100% blocks executed 100%
+        4:  231:bool DtcManager_ClearAll(bool clear_condition_met)
+        -:  232:{
+        -:  233:    uint32_t index;
+        -:  234:
+        4:  235:    if (!clear_condition_met) return false;
+branch  0 taken 2 (fallthrough)
+branch  1 taken 2
+        -:  236:
+        2:  237:    taskENTER_CRITICAL();
+call    0 returned 2
+       20:  238:    for (index = 0u; index < (uint32_t)DTC_ID_COUNT; index++)
+branch  0 taken 18
+branch  1 taken 2 (fallthrough)
+        -:  239:    {
+       18:  240:        uint32_t code = s_records[index].code;
+       18:  241:        (void)memset(&s_records[index], 0, sizeof(s_records[index]));
+       18:  242:        s_records[index].code = code;
+        -:  243:    }
+        2:  244:    s_generation++;
+        2:  245:    taskEXIT_CRITICAL();
+call    0 returned 2
+        2:  246:    LOGINFO_T("DTC", "all records cleared");
+call    0 returned 2
+        2:  247:    return true;
+        -:  248:}
