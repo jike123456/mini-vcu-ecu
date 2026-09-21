@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-09-21T03:12:28.281249+00:00",
+  "generated_utc": "2026-09-21T03:46:16.630423+00:00",
   "scope": "Five production C modules on host; hardware and RTOS dependencies stubbed",
   "compiler": "gcc.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 8.1.0",
   "gcov": "gcov (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 8.1.0",
@@ -112,7 +112,7 @@
       "uncovered_lines": [],
       "uncovered_branches": [],
       "path": "firmware/KaoYa_Project/Bsp/Src/pid.c",
-      "sha256": "aabb66b2d6c9d02be2ab39dee08b322c14ad1024d02ccd50315e85c49ea659dd"
+      "sha256": "5b455cbd5b51444368fd01f7ccef46eef0b14495d58bb6909149a27bd12253fa"
     }
   ],
   "test_sha256": "f7af779b5b4a6fc8df21418e4c28a91ab400460b70a5a583c1e087d4dcf74725",

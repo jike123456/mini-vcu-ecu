@@ -1,6 +1,6 @@
 # Host C coverage (generated)
 
-2026-09-21T03:12:28.281249+00:00
+2026-09-21T03:46:16.630423+00:00
 
 Production sources are copied byte-for-byte for Windows path compatibility.
 Only the five listed modules are in the denominator; test/stub code is excluded.
