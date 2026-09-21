@@ -106,4 +106,4 @@ docs/                   需求、设计、通信矩阵、验证报告与覆盖�
 
 ## 来源与许可
 
-本项目以 **Kaoya Robot 的 STM32F407/FreeRTOS 下位机框架**为基础扩展；原框架整理版见 [stm32-freertos-robot](https://github.com/jike123456/stm32-freertos-robot)。保留 Kaoya、ST、Arm、FreeRTOS 等原有版权与许可声明，具体来源和使用条款见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。本仓库不为整库添加统一开源许可证。
+本项目在既有 STM32F407/FreeRTOS 下位机框架上扩展，基础工程独立存放于 [stm32-freertos-robot](https://github.com/jike123456/stm32-freertos-robot)。保留基础框架及 ST、Arm、FreeRTOS 等组件原有的作者、版权与许可声明，完整来源和使用条款见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。本仓库不为整库添加统一开源许可证。
