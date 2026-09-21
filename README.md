@@ -2,7 +2,7 @@
 
 基于 STM32F407 + FreeRTOS 的非 AUTOSAR 微型电驱控制器学习项目。
 
-基于 Kaoya Robot 既有下位机框架扩展。原 STM32/FreeRTOS 学习工程独立存放于
+基于Robot既有下位机框架扩展。原 STM32/FreeRTOS 学习工程独立存放于
 [stm32-freertos-robot](https://github.com/jike123456/stm32-freertos-robot)；本仓库侧重
 控制状态机、通信保护、诊断、固件升级及测试验证，不主张全部底层代码为原创。
 
@@ -94,5 +94,5 @@ python tools/run_host_coverage.py --gcc C:\path\to\mingw64\bin\gcc.exe
 
 ## 来源与许可
 
-保留 Kaoya、ST、Arm、FreeRTOS 等原有版权和许可文件。不为整库添加统一开源许可证，
+保留ST、Arm、FreeRTOS 等原有版权和许可文件。不为整库添加统一开源许可证，
 详见 [第三方来源与许可说明](THIRD_PARTY_NOTICES.md)。
