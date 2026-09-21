@@ -36,7 +36,7 @@
         -:   31: *
         -:   32: * @platform    STM32F407ZGT6 + FreeRTOS + HAL
         -:   33: * @board       Kaoya Robot 下位机
-        -:   34: * @店铺链接： https://mall.bilibili.com/neul-next/detailshop/index.html?channel=WEIXIN&curTab=LIVE_REPLAY&loadingShow=1&msource=cps_showcase_384121683&noTitleBar=1&outsideMall=yes&page=detailshop_detail&share_mid=384121683&smallShopMid=384121683#themeType=1 
+        -:   34: *
         -:   35: * @copyright
         -:   36: *              Copyright (c) 2025-2035 Kaoya. All rights reserved.
         -:   37: ****************************************************************************************************
